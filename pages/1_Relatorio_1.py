@@ -228,5 +228,4 @@ with col10:
     })
     st.dataframe(df_materiais, use_container_width=True, hide_index=True)
 
-ser consideradas?")
-    st.write("> *Resposta da Equipe:* Sim, rugosidades e pequenos desgastes nos cantos da peça geram variações nas medidas. Isso foi considerado implicitamente na Incerteza Tipo A, pois as imperfeições aumentam a dispersão (desvio padrão) das múltiplas medições realizadas em diferentes pontos da peça.")
+
