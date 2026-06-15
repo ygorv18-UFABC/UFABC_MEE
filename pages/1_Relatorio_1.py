@@ -202,7 +202,7 @@ st.subheader("4. Resultados Finais e Identificação do Material")
 
 # Volume de um cubo: V = L^3
 volume = media_lp**3/1000  # Convertendo de mm³ para cm³
-errov = ((3**(0.5)) * (media_lp**2) * incerteza_combinada_lp)/1000  # Propagação do erro para V = L^3
+errov = ((3) * (media_lp**2) * incerteza_combinada_lp)/1000  # Propagação do erro para V = L^3
 errom = incerteza_combinada_massa
 errod = np.sqrt(
     (errom/volume)**2 + 
@@ -228,14 +228,5 @@ with col10:
     })
     st.dataframe(df_materiais, use_container_width=True, hide_index=True)
 
-st.success("🎯 **Conclusão:** Comparando a densidade experimental obtida com a Tabela de Referência, concluímos que o material da peça é o **latão ou cobre**.")
-
-# ==========================================
-# 5. Questões do Relatório
-# ==========================================
-with st.expander("📝 Respostas para as Questões do Roteiro"):
-    st.write("**Questão 1:** Analisando seus dados e as dificuldades encontradas, quais são suas conclusões sobre a precisão e as limitações das medidas realizadas com a régua, o paquímetro e o micrômetro?")
-    st.write("> *Resposta da Equipe:* O micrômetro apresentou a menor incerteza tipo B, fornecendo a maior precisão, seguido pelo paquímetro e pela régua. No entanto, a régua é o instrumento mais prático para medidas maiores e menos exigentes.")
-    
-    st.write("**Questão 2:** Vocês acham que as imperfeições mecânicas das peças afetaram as medidas das dimensões? Como elas poderiam ser consideradas?")
+ser consideradas?")
     st.write("> *Resposta da Equipe:* Sim, rugosidades e pequenos desgastes nos cantos da peça geram variações nas medidas. Isso foi considerado implicitamente na Incerteza Tipo A, pois as imperfeições aumentam a dispersão (desvio padrão) das múltiplas medições realizadas em diferentes pontos da peça.")
