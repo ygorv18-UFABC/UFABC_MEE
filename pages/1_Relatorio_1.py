@@ -201,8 +201,13 @@ st.divider()
 st.subheader("4. Resultados Finais e Identificação do Material")
 
 # Volume de um cubo: V = L^3
-volume = media_l**3
-
+volume = media_lp**3/1000  # Convertendo de mm³ para cm³
+errov = ((3**(0.5)) * (media_lp**2) * incerteza_combinada_lp)/1000  # Propagação do erro para V = L^3
+errom = incerteza_combinada_massa
+errod = np.sqrt(
+    (errom/volume)**2 + 
+    ((errov*media_massa)/(volume**2))**2
+    )  # Propagação do erro para d = m/V 
 # Densidade: d = m / V
 densidade = media_massa / volume
 
@@ -210,9 +215,10 @@ col9, col10 = st.columns(2)
 
 with col9:
     st.write("### Cálculos Obtidos")
-    st.metric("Volume Calculado", f"{volume:.2f} cm³")
-    st.metric("Densidade Experimental", f"{densidade:.2f} g/cm³")
-
+    st.metric("Volume Calculado", f"{volume:.6f} cm³")
+    st.metric("Erro do Volume", f"±{errov:.6f} cm³")
+    st.metric("Densidade Experimental", f"{densidade:.8f} g/cm³")
+    st.metric("Erro da Densidade", f"±{errod:.8f} g/cm³")
 with col10:
     st.write("### Tabela I - Densidade Típica de Materiais")
     # Tabela fornecida no roteiro
@@ -222,7 +228,7 @@ with col10:
     })
     st.dataframe(df_materiais, use_container_width=True, hide_index=True)
 
-st.success("🎯 **Conclusão:** Comparando a densidade experimental obtida com a Tabela de Referência, concluímos que o material da peça é o **Alumínio**.")
+st.success("🎯 **Conclusão:** Comparando a densidade experimental obtida com a Tabela de Referência, concluímos que o material da peça é o **latão ou cobre**.")
 
 # ==========================================
 # 5. Questões do Relatório
