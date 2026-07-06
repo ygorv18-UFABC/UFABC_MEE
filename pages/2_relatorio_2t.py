@@ -296,3 +296,53 @@ desvio_padrao = np.std(k_b, ddof=1)
 incerteza_k = desvio_padrao / np.sqrt(4)
 st.metric("Desvio Padrão da Amostra (s)", f"{desvio_padrao:.4f}")
 st.metric("Incerteza Tipo A (u_k)", f"{incerteza_k:.4f}")
+
+
+
+
+st.divider()
+st.header("Item 11: Compatibilidade entre Métodos (Z-Score)")
+
+# ==========================================
+# 1. ENTRADA DE DADOS (Integração)
+# ==========================================
+# Se as variáveis já existirem no seu código unificado, você não precisa destes inputs manuais.
+# Eles estão aqui apenas para garantir que a interface funcione isoladamente.
+col_z1, col_z2 = st.columns(2)
+
+with col_z1:
+    st.markdown("**Método A (Estático - MMQ)**")
+    k_a = K_mmq  # Valor de K do método A (N/m)
+    u_ka = u_K_mmq  # Incerteza de K do método A
+    st.metric("Constante Elástica (Método A)", f"{k_a:.2f} N/m")   
+    st.metric("Incerteza (Método A)", f"{u_ka:.2f} N/m")
+
+with col_z2:
+    st.markdown("**Método B (Dinâmico - MHS)**")
+    k_b = k_b_media  # Valor de K do método B (N/m)
+    u_kb = incerteza_k  # Incerteza de K do método B
+    st.metric("Constante Elástica (Método B)", f"{k_b:.2f} N/m")
+    st.metric("Incerteza (Método B)", f"{u_kb:.2f} N/m")
+
+# ==========================================
+# 2. CÁLCULO DO Z-SCORE
+# ==========================================
+    # Prevenção de divisão por zero caso as incertezas sejam zeradas
+        # Fórmula: Z' = |Ka - Kb| / sqrt(u_Ka^2 + u_Kb^2)
+z_score = abs(k_a - k_b) / np.sqrt(u_ka**2 + u_kb**2)
+        
+st.latex(rf"Z' = \frac{{|{k_a:.2f} - {k_b:.2f}|}}{{\sqrt{{({u_ka:.2f})^2 + ({u_kb:.2f})^2}}}}")
+        
+st.metric(label="Resultado Z'", value=f"{z_score:.2f}")
+
+        # ==========================================
+        # 3. INTERPRETAÇÃO DAS HIPÓTESES
+        # ==========================================
+st.markdown("### Conclusão do Teste de Hipótese")
+        
+if z_score <= 2:
+    st.success("**Medições Compatíveis (Aceita-se $H_0$)** \n\nO valor de $Z' \le 2$ demonstra que a diferença entre os métodos A e B é estatisticamente insignificante frente às incertezas do experimento.")
+elif z_score > 3:
+    st.error("**Medições Incompatíveis (Aceita-se $H_1$)** \n\nO valor de $Z' > 3$ demonstra que há uma divergência significativa. Provavelmente ocorreu algum erro sistemático não estimado em um dos métodos.")
+else:
+    st.warning("**Zona de Indeterminação ($2 < Z' \le 3$)** \n\nRecomenda-se cautela. A diferença é limítrofe e, de acordo com as diretrizes, o experimento deveria ser refeito para um diagnóstico mais assertivo.")
