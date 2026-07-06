@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 u_mb = 0.1/(2 * np.sqrt(3))  # Incerteza da balança digital (kg)
 u_xb = 0.001/(2)  # Incerteza da régua (m)
@@ -129,7 +130,9 @@ st.data_editor(res_df_a,
         "k*": st.column_config.NumberColumn(format="%.4f"),
     }
 )
-res_df_a = res_df_a.drop(index=0)  # Removendo a primeira linha (onde Δx = 0)
+res_df_a = res_df_a.drop(index=0) 
+força_lida = força_lida[1:]  # Removendo a primeira linha (onde F = 0)
+delta_x = delta_x[1:]  # Removendo a primeira linha (onde Δx = 0)
 media_k = res_df_a['k'].mean()
 media_Km = res_df_a['k*'].mean()
 st.metric("Média de k (N/m)", f"{media_k:.4f}")
@@ -138,33 +141,144 @@ st.metric("Média de k* (N/m)", f"{media_Km:.4f}")
 #----------------B------------------------
 m_oscilante = 2100.64/1000  # Convertendo para kg
 N_osc = 40
-u_operador = 0.2
+u_operador = 0.1
+u_cronometro = 0.01 / (2 * np.sqrt(3))               # Cronômetro (s)
 tempos = np.array([ 23.3, 24.12, 21.30, 21.97])
+
+# 2. INCERTEZA COMBINADA DO PERÍODO (u_T)
+n_medidas = len(tempos)
+t_media = np.mean(tempos)
+# Incerteza Tipo A: Desvio padrão da média experimental
+# ddof=1 garante o cálculo do desvio padrão amostral (n-1)
+s_t = np.std(tempos, ddof=1)
+u_tipo_A = s_t / np.sqrt(n_medidas)
+
+# Cálculo da incerteza combinada do tempo
+u_T = np.sqrt(u_tipo_A**2 + u_operador**2 + u_cronometro**2)
+
     
 st.metric("Massa do Oscilador (kg)", value=m_oscilante)
 st.metric("Número de Oscilações (N)", value=N_osc)
 st.metric("Incerteza do Operador (s)", value=u_operador)
+st.metric("Incerteza do Cronômetro (s)", value=u_cronometro)
 
 # Cálculo de K_B para cada tempo medido
 # k = (4 * pi^2 * m * N^2) / T_N^2
 k_b = [((4 * np.pi**2 * m_oscilante * (N_osc**2)) / (t**2)) for t in tempos]
 k_b_media = np.mean(k_b)
 
+
+# 3. INCERTEZA PROPAGADA DA CONSTANTE (u_kb)
+
+# Derivadas parciais 
+dk_dm = np.array([((4 * np.pi**2 * (N_osc**2)) / (t**2)) for t in tempos])
+dk_dt = np.array([((8 * np.pi**2 * m_oscilante * N_osc**2)) / (t**3) for t in tempos])
+u_kb = np.sqrt((dk_dm * u_mb)**2 + (dk_dt * u_T)**2)
+
+# ==========================================
+# 4. ARREDONDAMENTO (Sempre para cima)
+# ==========================================
+# Arredondando para 2 casas decimais (multiplica por 100, teto, divide por 100)
+u_T_arredondado = np.ceil(u_T * 100) / 100
+u_kb_arredondado = np.ceil(u_kb * 100) / 100
+
+
 res_df_b = pd.DataFrame({
     "Tempo (s)": tempos,
-    "k_B (N/m)": k_b
+    "u_T (s)": [u_T] * len(tempos),
+    "k_B (N/m)": k_b,
+    "u_kb (N/m)": u_kb
 })
+
 
 st.dataframe(res_df_b,
     use_container_width=True,
     column_config={
         "Tempo (s)": st.column_config.NumberColumn(format="%.2f"),
+        "u_T (s)": st.column_config.NumberColumn(format="%.4f"),
         "k_B (N/m)": st.column_config.NumberColumn(format="%.4f"),
+        "u_kb (N/m)": st.column_config.NumberColumn(format="%.4f"),
     }
 )
 
 st.metric("massa do oscilador (kg)", value=m_oscilante)
 st.metric("Número de Oscilações (N)", value=N_osc)
-st.metric("Incerteza do Operador (s)", value=u_operador)
+st.metric("Incerteza do Cronômetro (s)", value=u_T)
 st.metric("Média de k_B (N/m)", f"{k_b_media:.8f}")
         
+
+
+
+
+#--------------------------------------graficos---------------
+
+Fo = força_lida
+u_F = u_Fb[1:]  # Incerteza do dinamômetro
+
+# 2. MÉTODO DOS MÍNIMOS QUADRADOS (MMQ)
+# ==========================================
+# O np.polyfit com grau 1 faz o ajuste linear: F = K * dx + linear_b
+# cov=True retorna a matriz de covariância para calcular o erro do coeficiente angular (K)
+coeficientes, covariancia = np.polyfit(delta_x, Fo, 1, cov=True)
+
+K_mmq = coeficientes[0]          # Coeficiente angular (a inclinação da reta, K)
+intercepto = coeficientes[1]     # Coeficiente linear (onde cruza o eixo y)
+
+# A incerteza de K é a raiz quadrada do primeiro elemento da diagonal da matriz de covariância
+u_K_mmq = np.sqrt(covariancia[0, 0])
+
+# Arredondando a incerteza de K para cima (ex: 1 casa decimal)
+u_K_arredondado = np.ceil(u_K_mmq * 100) / 100
+st.header("Resultados do Ajuste Linear (MMQ)")
+st.metric("Constante Elástica Ajustada (K)", f"{K_mmq:.2f} N/m")
+st.metric("Incerteza do Ajuste (u_K)", f"{u_K_arredondado:.2f} N/m")
+
+# ==========================================
+# 3. CONSTRUÇÃO DO GRÁFICO
+# ==========================================
+plt.figure(figsize=(10, 6))
+
+# 3.1. Plotagem dos dados experimentais com as barras de erro
+plt.errorbar(
+    delta_x, Fo, 
+    xerr=u_dxb, yerr=u_F, 
+    fmt='o',                  # Formato do marcador (círculos)
+    color='blue', 
+    ecolor='red',             # Cor das barras de erro
+    capsize=4,                # Tamanho do "chapéu" das barras de erro
+    label='Dados Experimentais'
+)
+
+# 3.2. Plotagem da reta de tendência (MMQ)
+# Criando um array contínuo de x para traçar a reta suavemente
+x_reta = np.linspace(min(delta_x) - 0.005, max(delta_x) + 0.005, 100)
+F_reta = K_mmq * x_reta + intercepto
+
+plt.plot(
+    x_reta, F_reta, 
+    '--',                     # Linha tracejada
+    color='black', 
+    label=f'Ajuste MMQ: $F = {K_mmq:.2f} \cdot \Delta x {"+" if intercepto > 0 else ""} {intercepto:.2f}$'
+)
+
+# 3.3. Estilização Profissional (Padrão Acadêmico)
+plt.title('Determinação da Constante Elástica (Método A)', fontsize=14)
+plt.xlabel('Deformação $\Delta x$ (m)', fontsize=12)
+plt.ylabel('Força Aplicada $F$ (N)', fontsize=12)
+plt.legend(loc='upper left', fontsize=11)
+plt.grid(True, linestyle=':', alpha=0.7)
+
+# Adicionando uma caixa de texto com o resultado final de K e sua incerteza
+texto_resultado = f"$K = ({K_mmq:.1f} \pm {u_K_arredondado:.1f})$ N/m"
+plt.text(
+    0.05, 0.20, texto_resultado, 
+    transform=plt.gca().transAxes, 
+    fontsize=12, 
+    bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray')
+)
+
+# Exibe o gráfico na tela
+plt.tight_layout()
+st.pyplot(plt)
+# Se estiver usando o Streamlit em vez de um script Python normal, 
+# substitua 'plt.show()' por 'st.pyplot(plt)'
