@@ -135,9 +135,12 @@ força_lida = força_lida[1:]  # Removendo a primeira linha (onde F = 0)
 delta_x = delta_x[1:]  # Removendo a primeira linha (onde Δx = 0)
 media_k = res_df_a['k'].mean()
 media_Km = res_df_a['k*'].mean()
+st.divider()
 st.metric("Média de k (N/m)", f"{media_k:.4f}")
 st.metric("Média de k* (N/m)", f"{media_Km:.4f}")
+st.header("usar a média do grafico essa é apenas para avaliar a consistência dos dados")
 
+st.divider()
 #----------------B------------------------
 m_oscilante = 2100.64/1000  # Convertendo para kg
 N_osc = 40
@@ -282,3 +285,14 @@ plt.tight_layout()
 st.pyplot(plt)
 # Se estiver usando o Streamlit em vez de um script Python normal, 
 # substitua 'plt.show()' por 'st.pyplot(plt)'
+
+
+st.title("Resultados do Experimento B")
+
+
+# 2. Cálculo do desvio padrão da amostra (s)
+# ddof=1 garante o uso de (n-1) no denominador, padrão para amostras experimentais
+desvio_padrao = np.std(k_b, ddof=1)
+incerteza_k = desvio_padrao / np.sqrt(4)
+st.metric("Desvio Padrão da Amostra (s)", f"{desvio_padrao:.4f}")
+st.metric("Incerteza Tipo A (u_k)", f"{incerteza_k:.4f}")
