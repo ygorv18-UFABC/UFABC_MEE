@@ -346,3 +346,34 @@ elif z_score > 3:
     st.error("**Medições Incompatíveis (Aceita-se $H_1$)** \n\nO valor de $Z' > 3$ demonstra que há uma divergência significativa. Provavelmente ocorreu algum erro sistemático não estimado em um dos métodos.")
 else:
     st.warning("**Zona de Indeterminação ($2 < Z' \le 3$)** \n\nRecomenda-se cautela. A diferença é limítrofe e, de acordo com as diretrizes, o experimento deveria ser refeito para um diagnóstico mais assertivo.")
+
+fig, ax = plt.subplots(figsize=(10, 5))
+
+# Eixo X de -4 a 4 (representando os desvios padrão Z)
+x = np.linspace(-4, 4, 1000)
+# Equação matemática da Curva Normal Padrão
+y = (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * x**2)
+
+ax.plot(x, y, color='black', linewidth=1.5)
+
+# ZONA VERDE: Compatível (|Z| <= 2)
+ax.fill_between(x, y, where=(abs(x) <= 2), color='green', alpha=0.3, label="Compatível")
+
+# ZONA AMARELA: Indeterminado (2 < |Z| <= 3)
+ax.fill_between(x, y, where=((abs(x) > 2) & (abs(x) <= 3)), color='yellow', alpha=0.3, label="Indeterminado")
+
+# ZONA VERMELHA: Incompatível (|Z| > 3)
+ax.fill_between(x, y, where=(abs(x) > 3), color='red', alpha=0.3, label="Incompatível")
+# Marcação do Z-score calculado pelo experimento
+# Colocamos o ponto tanto do lado positivo quanto negativo pois testamos o módulo (bicaudal)
+ax.axvline(z_score, color='black', linestyle='--', linewidth=2, label=f"Seu Z' ({z_score:.2f})")
+
+# Estilização do gráfico
+ax.set_title("Distribuição do Teste de Compatibilidade (Z-Score)", fontsize=14)
+ax.set_xlabel("Z' (Desvios Normalizados)", fontsize=12)
+ax.set_ylabel("Densidade de Probabilidade", fontsize=12)
+ax.set_yticks([]) # Oculta os números do eixo Y (não importam fisicamente aqui)
+ax.legend(loc='upper right')
+
+# Renderiza o gráfico
+st.pyplot(fig)
