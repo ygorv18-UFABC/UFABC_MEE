@@ -236,6 +236,31 @@ st.header("Resultados do Ajuste Linear (MMQ)")
 st.metric("Constante Elástica Ajustada (K)", f"{K_mmq:.2f} N/m")
 st.metric("Incerteza do Ajuste (u_K)", f"{u_K_arredondado:.2f} N/m")
 
+
+
+st.markdown("**Matriz de Covariância Obtida (MMQ):**")
+
+# Utilizamos st.latex com uma f-string (rf"") para injetar as variáveis.
+# Atenção: as chaves duplas {{ }} são necessárias para o Python não confundir 
+# com a injeção de variáveis da f-string.
+st.latex(rf"""
+\text{{Cov}} = 
+\begin{{bmatrix}} 
+\text{{Var}}(K) & \text{{Cov}}(K, b) \\ 
+\text{{Cov}}(b, K) & \text{{Var}}(b) 
+\end{{bmatrix}} 
+= 
+\begin{{bmatrix}} 
+{covariancia[0,0]:.4f} & {covariancia[0,1]:.4f} \\ 
+{covariancia[1,0]:.4f} & {covariancia[1,1]:.4f} 
+\end{{bmatrix}}
+""")
+# Opcional: Para mostrar didaticamente de onde saiu a incerteza
+st.latex(rf"\mu_K = \sqrt{{\text{{Var}}(K)}} = \sqrt{{{covariancia[0,0]:.4f}}} = {u_K_mmq:.2f} \text{{ N/m}}")
+
+
+
+
 # ==========================================
 # 3. CONSTRUÇÃO DO GRÁFICO
 # ==========================================
