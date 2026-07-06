@@ -2,13 +2,21 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-u_m = 0.1/(2 * np.sqrt(3))  # Incerteza da balança digital (kg)
+u_mb = 0.1/(2 * np.sqrt(3))  # Incerteza da balança digital (kg)
+u_xb = 0.001/(2)  # Incerteza da régua (m)
+u_dxb = u_xb*np.sqrt(2)  # Incerteza da diferença de posição (m)
+
+col1, col2 = st.columns([1, 2])
+st.metric("Incerteza da Balança Digital (kg)", value=u_mb, format="%.6f")
+st.metric("Incerteza da Diferença de Posição (m)", value=u_dxb, format="%.6f")
+st.metric("Incerteza da Régua (m)", value=u_xb, format="%.6f")
+
 massas = {
     "Quantidade": [1, 1, 1, 1],
     "Formato": ["Paralelepípedo", "Cilindro", "Cilindro", "Cilindro"],
     "Material": ["Cu", "Cu", "Al (X)", "Al (1)"],
     "m": [1066.09, 836.96, 258.73, 258.55],
-    "u_m": [u_m, u_m, u_m, u_m] # Erro calculado anteriormente
+    "u_m": [u_mb, u_mb, u_mb, u_mb] # Erro calculado anteriormente
 }
 massas_df = pd.DataFrame(massas)
 massas_df["m"] = massas_df["m"]/1000 # Convertendo de g para kg
@@ -70,7 +78,10 @@ df_a = pd.DataFrame({
             0.195   # x5
         ]
     })
+
+
 força_lida = np.array(df_a["Força_Lida_F (N)"])
+u_Fb = np.array((força_lida*0.005) + 0.2)  # Incerteza da força (N)
 x_lido = np.array(df_a["Posição_x (m)"])
 delta_m = np.array(df_a["dm"])
 dx0 = x_lido[0]
@@ -81,14 +92,28 @@ dx4 = x_lido[4] - dx0
 dx5 = x_lido[5] - dx0
 delta_x = np.array([dx0, dx1, dx2, dx3, dx4, dx5])    
 
+
+# 1. Cálculo das derivadas parciais
+dK_dF = 1/delta_x
+dK_ddx = força_lida / (delta_x**2)
+# 2. Cálculo da incerteza propagada (u_K)
+u_K = np.sqrt((dK_dF * u_Fb)**2 + (dK_ddx * u_dxb)**2)
+# 3. Arredondamento para cima (aplicando a regra de limite de casas decimais)
+# Exemplo para 2 casas decimais: multiplica por 100, aplica ceil, divide por 100
+u_K_c = np.ceil(u_K * 100) / 100
+
+
 res_df_a = pd.DataFrame({
     "F" : força_lida,
+    "u_F" : u_Fb,
     "dm" : delta_m,
     "x" : x_lido,
     "Δx" : delta_x
 })
 
 res_df_a['k'] = res_df_a['F'] / res_df_a['Δx']
+res_df_a['u_k'] = u_K
+res_df_a['u_kc'] = u_K_c
 res_df_a['k/g'] = res_df_a['dm']/ res_df_a['Δx']
 res_df_a['k*'] = res_df_a['k/g'] * 9.81  # Convertendo para N/m
 
@@ -96,6 +121,7 @@ st.data_editor(res_df_a,
     use_container_width=True,
     column_config={
         "F": st.column_config.NumberColumn(format="%.4f"),
+        "u_F": st.column_config.NumberColumn(format="%.4f"),
         "x": st.column_config.NumberColumn(format="%.4f"),
         "Δx": st.column_config.NumberColumn(format="%.4f"),
         "k": st.column_config.NumberColumn(format="%.4f"),
